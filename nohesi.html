@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mini Racing Game</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: #222;
+  }
+  #info {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="info">Use ← → to steer. Avoid obstacles!</div>
+<canvas id="game" width="400" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const player = {
+  x: canvas.width / 2 - 20,
+  y: canvas.height - 80,
+  width: 40,
+  height: 70,
+  speed: 6
+};
+
+let obstacles = [];
+let frame = 0;
+let score = 0;
+let gameOver = false;
+let keys = {};
+let roadWidth = 200;
+let speed = 5;
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function spawnObstacle() {
+  const lane = Math.random() * (roadWidth - 30) + (canvas.width/2 - roadWidth/2);
+  obstacles.push({
+    x: lane,
+    y: -50,
+    width: 30,
+    height: 50,
+    speed: speed
+  });
+}
+
+function update() {
+  if (gameOver) return;
+
+  frame++;
+  if (frame % 40 === 0) spawnObstacle();
+
+  // Player movement
+  if (keys["ArrowLeft"] && player.x > canvas.width/2 - roadWidth/2) player.x -= player.speed;
+  if (keys["ArrowRight"] && player.x < canvas.width/2 + roadWidth/2 - player.width) player.x += player.speed;
+
+  // Move obstacles
+  obstacles.forEach(o => {
+    o.y += o.speed;
+
+    // Collision detection
+    if (
+      o.x < player.x + player.width &&
+      o.x + o.width > player.x &&
+      o.y < player.y + player.height &&
+      o.y + o.height > player.y
+    ) {
+      gameOver = true;
+    }
+  });
+
+  obstacles = obstacles.filter(o => o.y < canvas.height + 50);
+
+  // Increase difficulty over time
+  if (frame % 200 === 0) speed += 0.5;
+
+  score++;
+}
+
+function drawRoad() {
+  ctx.fillStyle = "#555";
+  const roadLeft = canvas.width/2 - roadWidth/2;
+  ctx.fillRect(roadLeft, 0, roadWidth, canvas.height);
+
+  // Road lines for perspective
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  for(let i = 0; i < canvas.height; i += 40){
+    const lineWidth = 10 * (1 - i / canvas.height); // perspective effect
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2 - lineWidth/2, i);
+    ctx.lineTo(canvas.width/2 + lineWidth/2, i);
+    ctx.stroke();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawRoad();
+
+  // Player car
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // Obstacles
+  ctx.fillStyle = "red";
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.width, o.height));
+
+  // Score
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.fillText("Score: " + score, 10, 20);
+
+  if (gameOver) {
+    ctx.fillStyle = "yellow";
+    ctx.font = "30px Arial";
+    ctx.fillText("GAME OVER", 100, 250);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
